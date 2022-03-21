@@ -1,7 +1,9 @@
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, middleware::Logger, App, HttpResponse, HttpServer, Responder};
+use log::info;
 
 #[macro_use]
 extern crate serde_json;
+extern crate log;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -17,8 +19,19 @@ async fn health() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(hello).service(health))
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
+    let address = "0.0.0.0";
+    let port = 8080;
+
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+
+    info!("Starting Server at {}:{}", address, port);
+    HttpServer::new(|| {
+        App::new()
+            .wrap(Logger::new(r#""%r" %s %Tms"#))
+            .service(hello)
+            .service(health)
+    })
+    .bind((address, port))?
+    .run()
+    .await
 }
